@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CyberSecGuard — Integrated Cybersecurity Assessment Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* light theme (default) */
+    --bg: #F2F3F6;
+    --panel: #FFFFFF;
+    --panel-raised: #F7F8FA;
+    --line: #DEE1E8;
+    --text: #1A1F2B;
+    --text-muted: #5B6377;
+    --text-dim: #8A93A6;
+    --header-bg: rgba(242,243,246,0.88);
+
+    /* semantic: amber = safe/verified, teal = risk/warnings */
+    --safe: #B9791A;
+    --safe-fill: #F0A93F;
+    --safe-dim: #F3DCB0;
+    --risk: #1F8F68;
+    --risk-fill: #3ECF9E;
+    --risk-dim: #BFEBDC;
+    --red: #C23B3B;
+
+    /* decorative brand accent — constant across themes */
+    --accent: #2FBF8F;
+    --accent-dim: #BFEBDC;
+    --accent-ink: #0F1712;
+
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141821;
+      --panel: #1B212E;
+      --panel-raised: #212838;
+      --line: #2B3345;
+      --text: #E8EBF1;
+      --text-muted: #8C93A6;
+      --text-dim: #5B6377;
+      --header-bg: rgba(20,24,33,0.88);
+
+      --safe: #F0A93F;
+      --safe-fill: #F0A93F;
+      --safe-dim: #6b5227;
+      --risk: #3ECF9E;
+      --risk-fill: #3ECF9E;
+      --risk-dim: #1f4a3d;
+      --red: #E85D5D;
+
+      --accent: #3ECF9E;
+      --accent-dim: #1f4a3d;
+      --accent-ink: #0F1712;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141821;
+    --panel: #1B212E;
+    --panel-raised: #212838;
+    --line: #2B3345;
+    --text: #E8EBF1;
+    --text-muted: #8C93A6;
+    --text-dim: #5B6377;
+    --header-bg: rgba(20,24,33,0.88);
+
+    --safe: #F0A93F;
+    --safe-fill: #F0A93F;
+    --safe-dim: #6b5227;
+    --risk: #3ECF9E;
+    --risk-fill: #3ECF9E;
+    --risk-dim: #1f4a3d;
+    --red: #E85D5D;
+
+    --accent: #3ECF9E;
+    --accent-dim: #1f4a3d;
+    --accent-ink: #0F1712;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); scroll-behavior: smooth; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-attachment: fixed;
+    background-position: -1px -1px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+    background: var(--header-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; max-width: 880px; margin: 0 auto;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 13px; color: var(--accent);
+  }
+  .brand-name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .header-status {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--safe-fill); display: inline-block; }
+
+  /* ---------- Theme toggle ---------- */
+  .theme-toggle {
+    width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel-raised); color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .theme-toggle:hover { border-color: var(--text-dim); color: var(--text); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+  .theme-toggle .icon-moon { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: none; }
+    :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: block; }
+  }
+  :root[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
+  :root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+  :root[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 56px 0 40px; }
+  .eyebrow-line {
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--text-dim);
+    margin-bottom: 18px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 42px); line-height: 1.15; font-weight: 600;
+    letter-spacing: -0.02em; margin: 0 0 16px;
+    max-width: 15ch;
+  }
+  .lede {
+    color: var(--text-muted); font-size: 17px; line-height: 1.6;
+    max-width: 62ch; margin: 0 0 8px;
+  }
+
+  /* ---------- Console panel (live demo) ---------- */
+  .console {
+    margin-top: 36px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .console-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    background: var(--panel-raised);
+  }
+  .console-titlebar span {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+  }
+  .traffic-dots { display: flex; gap: 6px; }
+  .traffic-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block; }
+
+  .console-body { padding: 22px; }
+  .field-label {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+    margin-bottom: 8px; display: block;
+  }
+  #pwInput {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  #pwInput:focus { border-color: var(--accent); }
+  #pwInput::placeholder { color: var(--text-dim); }
+
+  .readout { margin-top: 18px; display: none; }
+  .readout.active { display: block; }
+
+  .strength-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .strength-track {
+    flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; width: 0%; border-radius: 3px;
+    transition: width 0.25s ease, background-color 0.25s ease;
+  }
+  .strength-label {
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    min-width: 92px; text-align: right;
+  }
+
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 6px;
+    overflow: hidden; margin-bottom: 14px;
+  }
+  .stat-cell { background: var(--panel-raised); padding: 12px 14px; }
+  .stat-cell .k { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .stat-cell .v { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+
+  .issue-list { list-style: none; margin: 0; padding: 0; font-family: var(--font-mono); font-size: 13px; }
+  .issue-list li {
+    padding: 7px 0; color: var(--text-muted); border-top: 1px solid var(--line);
+    display: flex; gap: 8px;
+  }
+  .issue-list li:first-child { border-top: none; }
+  .issue-list li::before { content: '›'; color: var(--risk); flex-shrink: 0; }
+  .issue-list li.ok::before { content: '✓'; color: var(--safe); }
+
+  .hint {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); margin-top: 16px;
+  }
+
+  /* ---------- Section shared ---------- */
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .section-head h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .section-head .tag {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+  }
+  .section-desc { color: var(--text-muted); font-size: 15px; line-height: 1.65; max-width: 62ch; margin: 0 0 28px; }
+
+  /* ---------- Module log panels ---------- */
+  .log-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .log-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel-raised);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .log-header .name { font-weight: 600; font-size: 14.5px; }
+  .log-header .badge {
+    font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: 3px;
+    border: 1px solid var(--accent-dim); color: var(--accent);
+  }
+  .log-body { padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.85; overflow-x: auto; }
+  .log-body .ln-open { color: var(--accent); }
+  .log-body .ln-risk { color: var(--risk); }
+  .log-body .ln-alert { color: var(--red); }
+  .log-body .ln-dim { color: var(--text-dim); }
+  .log-body .ln-num { color: var(--text-dim); display: inline-block; width: 24px; user-select: none; }
+  .feature-note {
+    color: var(--text-muted); font-size: 14px; line-height: 1.6; padding: 0 16px 16px;
+  }
+
+  /* ---------- Why not in-browser callout ---------- */
+  .callout {
+    border: 1px solid var(--risk-dim); background: color-mix(in srgb, var(--risk-fill) 8%, transparent);
+    border-radius: 8px; padding: 18px 20px; margin-top: 8px;
+  }
+  .callout .k { font-family: var(--font-mono); font-size: 12px; color: var(--risk); margin-bottom: 8px; font-weight: 600; }
+  .callout p { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.65; }
+
+  /* ---------- Setup ---------- */
+  .steps { counter-reset: step; }
+  .step { display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .step:first-child { border-top: none; }
+  .step-num {
+    font-family: var(--font-mono); font-size: 13px; color: var(--text-dim);
+    flex-shrink: 0; width: 20px; padding-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 600; font-size: 14.5px; margin-bottom: 6px; }
+  .step-desc { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+  code.inline {
+    font-family: var(--font-mono); font-size: 12.5px; background: var(--panel-raised);
+    border: 1px solid var(--line); padding: 2px 6px; border-radius: 4px; color: var(--accent);
+  }
+  pre.cmd {
+    font-family: var(--font-mono); font-size: 13px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
+    overflow-x: auto; margin: 0; color: var(--text);
+  }
+
+  /* ---------- Footer / CTA ---------- */
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .btn {
+    font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+    padding: 12px 20px; border-radius: 6px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--line); transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-ghost { color: var(--text); background: transparent; }
+  .btn-ghost:hover { border-color: var(--text-dim); }
+
+  footer {
+    border-top: 1px solid var(--line); padding: 32px 0 40px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .strength-label { min-width: auto; }
+    footer { flex-direction: column; }
+  }
+
+  /* dark-mode-only design; force dark regardless of system preference for console feel */
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">CG</div>
+      <div class="brand-name">CyberSecGuard</div>
+    </div>
+    <div class="header-status">
+      <span class="dot"></span>v1.0 · local-first
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- HERO + LIVE DEMO -->
+  <section class="hero" style="border-top:none; padding-top:56px;">
+    <div class="eyebrow-line">
+      <span>PYTHON</span><span>·</span><span>MYSQL</span><span>·</span><span>NMAP</span><span>·</span><span>WIRESHARK</span><span>·</span><span>JAVASCRIPT</span><span>·</span><span>DOCKER</span>
+    </div>
+    <h1>An integrated cybersecurity assessment suite.</h1>
+    <p class="lede">
+      Three tools security teams normally run separately — a network vulnerability scanner,
+      a live traffic analyzer, and an encrypted password manager — combined into one dashboard backed by MySQL.
+      Try the password checker below; it's running live, right here, in your browser.
+    </p>
+
+    <div class="console">
+      <div class="console-titlebar">
+        <span>password_strength_check.js — live</span>
+        <div class="traffic-dots"><i></i><i></i><i></i></div>
+      </div>
+      <div class="console-body">
+        <label class="field-label" for="pwInput">test a password</label>
+        <input id="pwInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Type here — nothing leaves your browser">
+
+        <div class="readout" id="readout">
+          <div class="strength-row">
+            <div class="strength-track"><div class="strength-fill" id="fill"></div></div>
+            <div class="strength-label" id="label">—</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <div class="k">entropy</div>
+              <div class="v" id="entropyVal">—</div>
+            </div>
+            <div class="stat-cell">
+              <div class="k">est. offline crack time</div>
+              <div class="v" id="crackVal">—</div>
+            </div>
+          </div>
+          <ul class="issue-list" id="issueList"></ul>
+        </div>
+        <div class="hint">Same entropy + pattern logic as <code class="inline">password_tool.py</code> in the full toolkit — reimplemented client-side. Nothing you type is stored or transmitted.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCANNER -->
+  <section id="scanner">
+    <div class="section-head">
+      <h2>Network Vulnerability Scanner</h2>
+      <span class="tag">scanner.py</span>
+    </div>
+    <p class="section-desc">
+      Nmap-powered scan (<code class="inline">nmap -sV</code>) with service and version detection, plus an offline known-risk lookup &mdash;
+      flags services like exposed Redis or legacy SMB against their known exploit history.
+      Falls back to a built-in multi-threaded TCP scan if Nmap isn&rsquo;t installed.
+    </p>
+
+    <div class="log-panel">
+      <div class="log-header">
+        <span class="name">Sample scan report</span>
+        <span class="badge">127.0.0.1</span>
+      </div>
+      <div class="log-body"><div
+><span class="ln-num">1</span><span class="ln-dim">Scanning 22 ports on 192.168.1.14 ...</span></div><div
+><span class="ln-num">2</span></div><div
+><span class="ln-num">3</span><span class="ln-open">[+] Port 22 (SSH) — OPEN</span></div><div
+><span class="ln-num">4</span><span class="ln-dim">    Banner : SSH-2.0-OpenSSH_8.9p1</span></div><div
+><span class="ln-num">5</span><span class="ln-risk">    Risk   : Check for outdated OpenSSH versions / weak auth config.</span></div><div
+><span class="ln-num">6</span></div><div
+><span class="ln-num">7</span><span class="ln-open">[+] Port 445 (SMB) — OPEN</span></div><div
+><span class="ln-num">8</span><span class="ln-risk">    Risk   : History of critical RCE vulnerabilities (e.g. EternalBlue/MS17-010).</span></div><div
+><span class="ln-num">9</span></div><div
+><span class="ln-num">10</span><span class="ln-open">[+] Port 6379 (Redis) — OPEN</span></div><div
+><span class="ln-num">11</span><span class="ln-risk">    Risk   : Often left unauthenticated — full data/RCE exposure risk.</span></div></div>
+      <div class="feature-note">Sample output for illustration — run it against your own network below to see real results.</div>
+    </div>
+  </section>
+
+  <!-- SNIFFER -->
+  <section id="sniffer">
+    <div class="section-head">
+      <h2>Packet Sniffer &amp; Traffic Analyzer</h2>
+      <span class="tag">sniffer.py</span>
+    </div>
+    <p class="section-desc">
+      Live capture through <code class="inline">tshark</code> (Wireshark&rsquo;s capture engine, with a Scapy fallback) and a protocol breakdown, plus heuristic anomaly detection:
+      ARP spoofing (one IP, multiple MACs), SYN floods (sliding time-window rate), and port-scan behavior
+      (one source touching many destination ports).
+    </p>
+
+    <div class="log-panel">
+      <div class="log-header">
+        <span class="name">Sample capture summary</span>
+        <span class="badge">247 packets</span>
+      </div>
+      <div class="log-body"><div
+><span class="ln-num">1</span><span class="ln-dim">Protocol breakdown:</span></div><div
+><span class="ln-num">2</span><span class="ln-dim">  TCP       : 181</span></div><div
+><span class="ln-num">3</span><span class="ln-dim">  UDP       : 40</span></div><div
+><span class="ln-num">4</span><span class="ln-dim">  ARP       : 19</span></div><div
+><span class="ln-num">5</span><span class="ln-dim">  ICMP      : 7</span></div><div
+><span class="ln-num">6</span></div><div
+><span class="ln-num">7</span><span class="ln-alert">[ARP SPOOF SUSPECTED] 192.168.1.1 claimed by multiple MACs</span></div><div
+><span class="ln-num">8</span><span class="ln-alert">[PORT SCAN SUSPECTED] 192.168.1.37 touched 15+ distinct ports</span></div></div>
+      <div class="feature-note">Sample output for illustration — run it locally to capture your own network's traffic.</div>
+    </div>
+
+    <div class="callout">
+      <div class="k">why this can't run on a website</div>
+      <p>Raw packet capture and arbitrary port scanning require OS-level network access that browsers deliberately withhold from every website — this is a security boundary, not a missing feature. It's the same reason Wireshark and nmap don't have "run in browser" versions. Download the toolkit below to run these two modules for real.</p>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="setup">
+    <div class="section-head">
+      <h2>Run it locally</h2>
+      <span class="tag">Docker · one command</span>
+    </div>
+    <p class="section-desc">Clone, set a password, run one Docker command — works on Windows, macOS, and Linux.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-title">Clone the repo</div>
+          <pre class="cmd">git clone https://github.com/avinash09-cmd/cybersec-guard-fullstack.git
+cd cybersec-guard-fullstack</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-title">Set a database password</div>
+          <div class="step-desc">Copy the example env file and choose a strong MySQL password (avoid <code class="inline">@ / :</code> in it).</div>
+          <pre class="cmd">cp .env.example .env
+# edit .env and set MYSQL_ROOT_PASSWORD</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-title">Start everything with Docker</div>
+          <div class="step-desc">One command builds the app and starts MySQL, with Nmap and tshark already installed in the image. Then open <code class="inline">http://localhost:5000</code>.</div>
+          <pre class="cmd">docker compose up --build</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <section>
+    <div class="section-head" style="margin-bottom:14px;">
+      <h2>Get the code</h2>
+    </div>
+    <p class="section-desc">Full source, README, and setup instructions on GitHub.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#" id="ghLink" target="_blank" rel="noopener">View on GitHub</a>
+      <a class="btn btn-ghost" href="#setup">Setup instructions ↑</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>CyberSecGuard — built for educational and authorized-testing use only.</span>
+    <span>Python · MySQL · Nmap · Wireshark · JavaScript · Docker</span>
+  </footer>
+  <div style="text-align:center; padding: 0 0 40px; font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);">
+    Made by Avinash with love ♥
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const COMMON = new Set(["123456","password","123456789","12345678","12345","qwerty",
+    "abc123","password1","111111","iloveyou","admin","welcome","monkey","letmein",
+    "dragon","football","123123","000000"]);
+  const SEQUENCES = ["abcdefghijklmnopqrstuvwxyz","0123456789","qwertyuiop","asdfghjkl","zxcvbnm"];
+
+  function hasSequential(pw, run) {
+    run = run || 3;
+    const lower = pw.toLowerCase();
+    for (const seq of SEQUENCES) {
+      for (let i = 0; i <= seq.length - run; i++) {
+        if (lower.includes(seq.slice(i, i + run))) return true;
+      }
+    }
+    return false;
+  }
+  function hasRepeated(pw, run) {
+    run = run || 3;
+    const re = new RegExp("(.)\\1{" + (run - 1) + ",}");
+    return re.test(pw);
+  }
+  function entropy(pw) {
+    let pool = 0;
+    if (/[a-z]/.test(pw)) pool += 26;
+    if (/[A-Z]/.test(pw)) pool += 26;
+    if (/[0-9]/.test(pw)) pool += 10;
+    if (/[^a-zA-Z0-9]/.test(pw)) pool += 32;
+    if (pool === 0) return 0;
+    return pw.length * Math.log2(pool);
+  }
+  function crackTime(bits) {
+    const guesses = Math.pow(2, bits);
+    const seconds = guesses / 1e10;
+    if (seconds < 1) return "instantly";
+    const units = [["centuries", 3.15e9], ["years", 3.15e7], ["days", 86400],
+                   ["hours", 3600], ["minutes", 60], ["seconds", 1]];
+    for (const [unit, secs] of units) {
+      if (seconds >= secs) return "~" + (seconds / secs).toLocaleString(undefined, {maximumFractionDigits: 1}) + " " + unit;
+    }
+    return "~" + seconds.toFixed(1) + " seconds";
+  }
+
+  function check(pw) {
+    const issues = [];
+    let score = 0;
+
+    if (pw.length < 8) { issues.push({ok:false, text:"Too short (use at least 12 characters)."}); }
+    else if (pw.length < 12) { issues.push({ok:false, text:"Reasonable length, but 12+ is stronger."}); score += 1; }
+    else { score += 2; }
+
+    const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter(r => r.test(pw)).length;
+    score += classes - 1;
+    if (classes < 3) issues.push({ok:false, text:"Add more character variety (upper/lower/digits/symbols)."});
+
+    if (COMMON.has(pw.toLowerCase())) { issues.push({ok:false, text:"This is one of the most common leaked passwords — never use it."}); score = 0; }
+    if (hasSequential(pw)) { issues.push({ok:false, text:"Contains a sequential pattern (e.g. 'abc', '123', 'qwerty')."}); score -= 1; }
+    if (hasRepeated(pw)) { issues.push({ok:false, text:"Contains repeated characters (e.g. 'aaa', '111')."}); score -= 1; }
+
+    score = Math.max(0, Math.min(score, 5));
+    const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong", "Very Strong"];
+    const cs = getComputedStyle(document.documentElement);
+    const red = cs.getPropertyValue("--red").trim();
+    const riskFill = cs.getPropertyValue("--risk-fill").trim();
+    const safeFill = cs.getPropertyValue("--safe-fill").trim();
+    const colors = [red, red, riskFill, riskFill, safeFill, safeFill];
+    const bits = entropy(pw);
+
+    return {
+      score, label: labels[score], color: colors[score],
+      bits: Math.round(bits * 10) / 10,
+      crack: crackTime(bits),
+      issues: issues.length ? issues : [{ok:true, text:"No major issues found."}]
+    };
+  }
+
+  const input = document.getElementById("pwInput");
+  const readout = document.getElementById("readout");
+  const fill = document.getElementById("fill");
+  const label = document.getElementById("label");
+  const entropyVal = document.getElementById("entropyVal");
+  const crackVal = document.getElementById("crackVal");
+  const issueList = document.getElementById("issueList");
+
+  input.addEventListener("input", function() {
+    const pw = input.value;
+    if (!pw) { readout.classList.remove("active"); return; }
+    readout.classList.add("active");
+    const r = check(pw);
+    fill.style.width = (r.score / 5 * 100) + "%";
+    fill.style.background = r.color;
+    label.textContent = r.label;
+    label.style.color = r.color;
+    entropyVal.textContent = r.bits + " bits";
+    crackVal.textContent = r.crack;
+    issueList.innerHTML = "";
+    r.issues.forEach(function(i) {
+      const li = document.createElement("li");
+      if (i.ok) li.className = "ok";
+      li.textContent = i.text;
+      issueList.appendChild(li);
+    });
+  });
+
+  // GitHub link placeholder — update data-repo below with the real URL
+  document.getElementById("ghLink").href = "https://github.com/avinash09-cmd/cybersec-guard-fullstack";
+
+  // Theme toggle — persists per-viewer via localStorage, falls back to system preference
+  (function() {
+    const root = document.documentElement;
+    const toggle = document.getElementById("themeToggle");
+    let saved = null;
+    try { saved = localStorage.getItem("cyberguard-theme"); } catch (e) { /* storage unavailable */ }
+    if (saved === "light" || saved === "dark") root.setAttribute("data-theme", saved);
+
+    toggle.addEventListener("click", function() {
+      const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const current = root.getAttribute("data-theme") || (systemDark ? "dark" : "light");
+      const next = current === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("cyberguard-theme", next); } catch (e) { /* storage unavailable */ }
+      // refresh the live strength readout colors if a password is already typed
+      input.dispatchEvent(new Event("input"));
+    });
+  })();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CyberSecGuard Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #141821; --panel: #1B212E; --panel-raised: #212838; --line: #2B3345;
+    --text: #E8EBF1; --text-muted: #8C93A6; --text-dim: #5B6377;
+    --safe: #F0A93F; --risk: #3ECF9E; --risk-dim: #1f4a3d; --red: #E85D5D;
+    --accent: #3ECF9E; --accent-ink: #0F1712;
+    --font-sans: 'IBM Plex Sans', sans-serif; --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px; }
+  .brand-mark { width:28px; height:28px; border:1.5px solid var(--accent); border-radius:3px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:13px; color:var(--accent); }
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:24px; }
+  .tab { padding:10px 16px; font-size:14px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; }
+  .tab.active { color:var(--text); border-bottom-color:var(--accent); }
+  .panel { display:none; }
+  .panel.active { display:block; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; margin-bottom:16px; }
+  .row { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  input, select { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:10px 12px; color:var(--text); font-family:var(--font-mono); font-size:14px; flex:1; min-width:160px; }
+  button { background:var(--accent); color:var(--accent-ink); border:none; border-radius:5px; padding:10px 18px; font-weight:600; font-size:14px; cursor:pointer; }
+  button:hover { opacity:0.88; }
+  button.secondary { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .log { font-family:var(--font-mono); font-size:13px; line-height:1.8; background:var(--panel-raised); border-radius:6px; padding:12px; max-height:320px; overflow-y:auto; }
+  .ln-open { color: var(--accent); } .ln-risk { color: var(--risk); } .ln-alert { color: var(--red); } .ln-dim { color: var(--text-dim); }
+  table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--text-dim); font-weight:500; }
+  .badge { font-family:var(--font-mono); font-size:11px; padding:2px 7px; border-radius:3px; border:1px solid var(--line); color:var(--text-muted); }
+  .muted { color:var(--text-dim); font-size:13px; }
+  .strength-bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin:10px 0; }
+  .strength-fill { height:100%; width:0%; transition:width .2s; }
+  .vault-locked { text-align:center; padding:30px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="brand-mark">CG</div>CyberSecGuard Dashboard</div>
+    <span class="muted" id="apiStatus">connecting…</span>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="scanner">Scanner</div>
+    <div class="tab" data-tab="traffic">Traffic</div>
+    <div class="tab" data-tab="vault">Vault</div>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="panel active" id="panel-scanner">
+    <div class="card">
+      <div class="row">
+        <input id="scanTarget" placeholder="Target (e.g. 127.0.0.1)" value="127.0.0.1">
+        <button onclick="runScan()">Scan</button>
+      </div>
+      <div class="log" id="scanLog"><span class="muted">No scan run yet.</span></div>
+    </div>
+    <div class="card">
+      <strong style="font-size:14px;">Recent scans</strong>
+      <table id="scanHistory"><thead><tr><th>Target</th><th>Engine</th><th>Open ports</th><th>When</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- TRAFFIC -->
+  <div class="panel" id="panel-traffic">
+    <div class="card">
+      <div class="row">
+        <select id="sniffDuration"><option value="5">5s capture</option><option value="10" selected>10s capture</option><option value="30">30s capture</option></select>
+        <button onclick="runSniff()">Capture</button>
+      </div>
+      <div class="log" id="sniffLog"><span class="muted">No capture run yet.</span></div>
+    </div>
+    <div class="card">
+      <strong style="font-size:14px;">Recent sessions</strong>
+      <table id="trafficHistory"><thead><tr><th>Engine</th><th>Packets</th><th>Alerts</th><th>When</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- VAULT -->
+  <div class="panel" id="panel-vault">
+    <div class="card">
+      <div class="row">
+        <input id="pwCheckInput" placeholder="Type a password to check strength">
+      </div>
+      <div class="strength-bar"><div class="strength-fill" id="pwFill"></div></div>
+      <div class="muted" id="pwResult">—</div>
+    </div>
+    <div class="card" id="vaultArea">
+      <div class="vault-locked">Loading vault…</div>
+    </div>
+  </div>
+  <div style="text-align:center; padding:32px 0 8px; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">Made by Avinash with love &#9829;</div>
+</div>
+
+<script>
+const API = window.location.origin;
+let vaultToken = null;
+
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+}));
+
+async function api(path, opts) {
+  const res = await fetch(API + path, opts);
+  return res.json();
+}
+
+async function checkApi() {
+  try {
+    await api("/api/vault/status");
+    document.getElementById("apiStatus").textContent = "● connected";
+    document.getElementById("apiStatus").style.color = "var(--accent)";
+  } catch (e) {
+    document.getElementById("apiStatus").textContent = "● backend not running";
+    document.getElementById("apiStatus").style.color = "var(--red)";
+  }
+}
+
+// ---------------- Scanner ----------------
+async function runScan() {
+  const target = document.getElementById("scanTarget").value.trim();
+  const log = document.getElementById("scanLog");
+  log.innerHTML = '<span class="ln-dim">Scanning ' + target + ' ...</span>';
+  const r = await api("/api/scan", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({target})});
+  if (r.error) { log.innerHTML = '<span class="ln-alert">' + r.error + '</span>'; return; }
+  let html = '<span class="ln-dim">Engine: ' + r.engine + ' — ' + r.results.length + ' open port(s)</span><br>';
+  r.results.forEach(p => {
+    html += '<span class="ln-open">[+] Port ' + p.port + ' (' + p.service + ') OPEN</span><br>';
+    if (p.risk_note) html += '<span class="ln-risk">    ' + p.risk_note + '</span><br>';
+  });
+  log.innerHTML = html || '<span class="muted">No open ports found.</span>';
+  loadScanHistory();
+}
+
+async function loadScanHistory() {
+  const scans = await api("/api/scans");
+  const tbody = document.querySelector("#scanHistory tbody");
+  tbody.innerHTML = scans.map(s => `<tr><td>${s.target}</td><td><span class="badge">${s.engine}</span></td><td>${s.ports.length}</td><td class="muted">${new Date(s.created_at).toLocaleString()}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">No scans yet.</td></tr>';
+}
+
+// ---------------- Traffic ----------------
+async function runSniff() {
+  const duration = document.getElementById("sniffDuration").value;
+  const log = document.getElementById("sniffLog");
+  log.innerHTML = '<span class="ln-dim">Capturing for ' + duration + 's ...</span>';
+  const r = await api("/api/sniff", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({duration: parseInt(duration)})});
+  if (r.error) { log.innerHTML = '<span class="ln-alert">' + r.error + '</span>'; return; }
+  let html = '<span class="ln-dim">Engine: ' + r.engine + ' — ' + r.packet_count + ' packets</span><br>';
+  Object.entries(r.protocol_summary).forEach(([k,v]) => html += '<span class="ln-dim">  ' + k + ': ' + v + '</span><br>');
+  r.alerts.forEach(a => html += '<span class="ln-alert">[' + a.type.toUpperCase() + '] ' + a.message + '</span><br>');
+  log.innerHTML = html;
+  loadTrafficHistory();
+}
+
+async function loadTrafficHistory() {
+  const sessions = await api("/api/alerts");
+  const tbody = document.querySelector("#trafficHistory tbody");
+  tbody.innerHTML = sessions.map(s => `<tr><td><span class="badge">${s.engine}</span></td><td>${s.packet_count}</td><td>${s.alerts.length}</td><td class="muted">${new Date(s.created_at).toLocaleString()}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">No captures yet.</td></tr>';
+}
+
+// ---------------- Password + Vault ----------------
+document.getElementById("pwCheckInput").addEventListener("input", async (e) => {
+  const pw = e.target.value;
+  const result = document.getElementById("pwResult");
+  const fill = document.getElementById("pwFill");
+  if (!pw) { result.textContent = "—"; fill.style.width = "0%"; return; }
+  const r = await api("/api/password/check", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({password: pw})});
+  const colors = ["var(--red)","var(--red)","var(--risk)","var(--risk)","var(--safe)","var(--safe)"];
+  fill.style.width = (r.score/5*100) + "%";
+  fill.style.background = colors[r.score];
+  result.innerHTML = r.label + " · " + r.entropy_bits + " bits · crack time: " + r.estimated_crack_time;
+});
+
+async function renderVaultArea() {
+  const area = document.getElementById("vaultArea");
+  const status = await api("/api/vault/status");
+
+  if (!status.exists) {
+    area.innerHTML = `
+      <div class="vault-locked">
+        <p>No vault yet — set a master password to create one.</p>
+        <div class="row" style="justify-content:center;">
+          <input id="setupPw" type="password" placeholder="New master password" style="max-width:260px;">
+          <button onclick="setupVault()">Create vault</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (!vaultToken) {
+    area.innerHTML = `
+      <div class="vault-locked">
+        <p>🔒 Vault is locked.</p>
+        <div class="row" style="justify-content:center;">
+          <input id="unlockPw" type="password" placeholder="Master password" style="max-width:260px;">
+          <button onclick="unlockVault()">Unlock</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const entries = await api("/api/vault/entries");
+  area.innerHTML = `
+    <strong style="font-size:14px;">Vault entries (unlocked)</strong>
+    <div class="row" style="margin-top:12px;">
+      <input id="newSite" placeholder="Site">
+      <input id="newUser" placeholder="Username">
+      <input id="newPass" type="password" placeholder="Password">
+      <button onclick="addVaultEntry()">Add</button>
+    </div>
+    <table><thead><tr><th>Site</th><th>Username</th><th></th></tr></thead>
+      <tbody>${entries.map(e => `<tr><td>${e.site}</td><td>${e.username||""}</td><td><button class="secondary" onclick="revealEntry(${e.id})">Reveal</button></td></tr>`).join("") || '<tr><td colspan="3" class="muted">No entries yet.</td></tr>'}</tbody>
+    </table>`;
+}
+
+async function setupVault() {
+  const pw = document.getElementById("setupPw").value;
+  const r = await api("/api/vault/setup", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({master_password: pw})});
+  if (r.error) { alert(r.error); return; }
+  renderVaultArea();
+}
+
+async function unlockVault() {
+  const pw = document.getElementById("unlockPw").value;
+  const r = await api("/api/vault/unlock", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({master_password: pw})});
+  if (r.error) { alert(r.error); return; }
+  vaultToken = r.token;
+  renderVaultArea();
+}
+
+async function addVaultEntry() {
+  const site = document.getElementById("newSite").value;
+  const username = document.getElementById("newUser").value;
+  const password = document.getElementById("newPass").value;
+  await api("/api/vault/entries", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({token: vaultToken, site, username, password})});
+  renderVaultArea();
+}
+
+async function revealEntry(id) {
+  const r = await api(`/api/vault/entries/${id}/reveal`, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({token: vaultToken})});
+  if (r.error) { alert(r.error); return; }
+  alert(`${r.site}\nUsername: ${r.username}\nPassword: ${r.password}`);
+}
+
+checkApi();
+loadScanHistory();
+loadTrafficHistory();
+renderVaultArea();
+setInterval(checkApi, 5000);
+</script>
+</body>
+</html>
